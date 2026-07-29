@@ -24,6 +24,23 @@ $overlay = fg '#3D3A47'
 $alert   = fg '#F2557E'
 $deep    = fg '#16141C'
 
+# ---- banner cleanup --------------------------------------------------------
+# If the console still shows the stock "PowerShell 7.x.x" banner (shell was
+# started without -NoLogo, e.g. via the Start-menu shortcut), wipe it so the
+# header is the first thing on screen. Only fires when the banner is the sole
+# content of a fresh buffer, so nested shells never lose their scrollback.
+try {
+    $raw = $Host.UI.RawUI
+    if ($raw.CursorPosition.Y -in 1..3) {
+        $w    = [Math]::Min(40, $raw.BufferSize.Width) - 1
+        $rect = [System.Management.Automation.Host.Rectangle]::new(0, 0, $w, 0)
+        $row0 = (-join ($raw.GetBufferContents($rect) | ForEach-Object Character)).Trim()
+        if ($row0 -match '^PowerShell \d+\.\d+\.\d+') {
+            [Console]::Write("$esc[2J$esc[3J$esc[H")
+        }
+    }
+} catch { }
+
 # ---- gather ----------------------------------------------------------------
 $nt  = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
 $cpu = (Get-ItemProperty 'HKLM:\HARDWARE\DESCRIPTION\System\CentralProcessor\0' -Name ProcessorNameString).ProcessorNameString.Trim()

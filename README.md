@@ -115,11 +115,13 @@ if ($Host.Name -eq 'ConsoleHost' -and -not [Console]::IsOutputRedirected -and
 }
 ```
 
-To silence the stock `PowerShell 7.x.x` banner itself (and the
-slow-profile-load notice), launch the shell with `-NoLogo` — in Windows
-Terminal, set the profile's `commandline` to `pwsh.exe -NoLogo`. Note that a
-nested shell started by typing `pwsh` inside an existing session won't have
-the flag; new terminal tabs will.
+If the shell is launched without `-NoLogo` (Start-menu shortcuts give you no
+way to add it), the header detects the stock `PowerShell 7.x.x` banner sitting
+alone at the top of a fresh buffer and erases it before printing, so the header
+is always the first thing on screen. Launching with `-NoLogo` where you can
+(e.g. a Windows Terminal profile's `commandline`) is still nicer — it avoids
+the one-frame banner flash and also suppresses the slow-profile-load notice —
+but it is no longer required.
 
 ## License
 
