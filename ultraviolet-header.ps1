@@ -1,9 +1,10 @@
 # ultraviolet startup header — hardware/OS summary in the ultraviolet palette
 # https://github.com/notreallycheeks/ultraviolet-omp
 #
-# Call from your $PROFILE (see README). Requires a Nerd Font and a terminal
-# with truecolor ANSI support. Run via the call operator (&) so nothing leaks
-# into the session scope.
+# Call from your $PROFILE (see README). Requires PowerShell 7+, a Nerd Font and
+# a terminal with truecolor ANSI support. Run via the call operator (&) so
+# nothing leaks into the session scope. Deliberately CIM/WMI-free so it stays
+# fast enough (<100 ms) to never trigger pwsh's slow-profile startup notice.
 
 $esc   = [char]27
 $reset = "$esc[0m"
@@ -21,29 +22,36 @@ $silver  = fg '#A9A5B8'
 $text    = fg '#E8E6F0'
 $overlay = fg '#3D3A47'
 $alert   = fg '#F2557E'
+$deep    = fg '#16141C'
 
 # ---- gather ----------------------------------------------------------------
-$os  = Get-CimInstance Win32_OperatingSystem -Property Caption, LastBootUpTime, TotalVisibleMemorySize, FreePhysicalMemory
 $nt  = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
 $cpu = (Get-ItemProperty 'HKLM:\HARDWARE\DESCRIPTION\System\CentralProcessor\0' -Name ProcessorNameString).ProcessorNameString.Trim()
 $gpu = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*' -Name DriverDesc -ErrorAction SilentlyContinue).DriverDesc |
     Where-Object { $_ -and $_ -notmatch 'Basic|Remote|Virtual|USB' } | Select-Object -First 1
 
-$osName = ($os.Caption -replace '^Microsoft ', '') + $(if ($nt.DisplayVersion) { " $($nt.DisplayVersion)" })
-$build  = "$($nt.CurrentBuild).$($nt.UBR)"
+# ProductName still says "Windows 10" on Windows 11 — correct it via the build number
+$osName = $nt.ProductName
+if ([int]$nt.CurrentBuild -ge 22000) { $osName = $osName -replace 'Windows 10', 'Windows 11' }
+if ($nt.DisplayVersion) { $osName += " $($nt.DisplayVersion)" }
+$build = "$($nt.CurrentBuild).$($nt.UBR)"
 
-$up    = (Get-Date) - $os.LastBootUpTime
+$up    = [TimeSpan]::FromMilliseconds([Environment]::TickCount64)
 $upStr = if ($up.Days) { '{0}d {1}h {2}m' -f $up.Days, $up.Hours, $up.Minutes }
          elseif ($up.Hours) { '{0}h {1}m' -f $up.Hours, $up.Minutes }
          else { '{0}m' -f $up.Minutes }
 
-$memTotal = $os.TotalVisibleMemorySize / 1MB          # KB -> GB
-$memUsed  = ($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB
+# GetGCMemoryInfo reports the state at the last GC; a fresh process has had
+# none yet, so nudge gen 0 once to populate it
+$mem = [System.GC]::GetGCMemoryInfo()
+if ($mem.MemoryLoadBytes -eq 0) { [System.GC]::Collect(0); $mem = [System.GC]::GetGCMemoryInfo() }
+$memTotal = $mem.TotalAvailableMemoryBytes / 1GB
+$memUsed  = $mem.MemoryLoadBytes / 1GB
 $memPct   = $memUsed / $memTotal
 
-$disk   = Get-PSDrive -Name ($env:SystemDrive[0])
-$dUsed  = $disk.Used / 1GB
-$dTotal = ($disk.Used + $disk.Free) / 1GB
+$disk   = [System.IO.DriveInfo]::new($env:SystemDrive)
+$dUsed  = ($disk.TotalSize - $disk.TotalFreeSpace) / 1GB
+$dTotal = $disk.TotalSize / 1GB
 
 # ---- render ----------------------------------------------------------------
 $barW   = 12
@@ -64,19 +72,41 @@ for ($i = 0; $i -lt $word.Length; $i++) {
 }
 $title += $reset
 
-function row([string]$icon, [string]$label, [string]$value) {
-    "$muted│$reset $violet$icon$reset  $muted$($label.PadRight(4))$reset $value"
+# PowerShell logo: a sheared parallelogram painted with background color,
+# vertical violet-bright -> violet-deep gradient, dark ❯_ in the middle
+$logoRows = @(
+    '              ',
+    '              ',
+    '              ',
+    '   ❯_         ',
+    '              ',
+    '              ',
+    '              '
+)
+$lFrom = 196, 181, 253                                 # violet-bright
+$lTo   = 91, 63, 166                                   # violet-deep
+$logo  = for ($i = 0; $i -lt 7; $i++) {
+    $t = $i / 6
+    $r = [int]($lFrom[0] + ($lTo[0] - $lFrom[0]) * $t)
+    $g = [int]($lFrom[1] + ($lTo[1] - $lFrom[1]) * $t)
+    $b = [int]($lFrom[2] + ($lTo[2] - $lFrom[2]) * $t)
+    (' ' * (6 - $i)) + "$esc[48;2;$r;$g;${b}m$esc[1m$deep$($logoRows[$i])$reset" + (' ' * $i)
 }
 
-$lines = @(
-    "$muted╭─$reset $title"
-    row '' 'user' "$text$($env:USERNAME.ToLower())$muted@$reset$silver$($env:COMPUTERNAME.ToLower())$reset"
-    row '' 'os'   "$text$osName$reset $muted· $build$reset"
-    row '' 'cpu'  "$silver$cpu$reset"
-    row '' 'gpu'  "$silver$gpu$reset"
-    row '' 'mem'  ("$text{0:N1}$muted / {1:N1} GB$reset  {2} $silver{3}%$reset" -f $memUsed, $memTotal, $bar, [int][math]::Round($memPct * 100))
-    row '' 'disk' ("$text{0:N0}$muted / {1:N0} GB$reset $muted($($disk.Name):)$reset" -f $dUsed, $dTotal)
-    row '' 'up'   "$silver$upStr$reset $muted· pwsh $($PSVersionTable.PSVersion)$reset"
-    "$muted╰─$reset"
+$info = @(
+    ('', 'user', "$text$($env:USERNAME.ToLower())$muted@$reset$silver$($env:COMPUTERNAME.ToLower())$reset"),
+    ('', 'os',   "$text$osName$reset $muted· $build$reset"),
+    ('', 'cpu',  "$silver$cpu$reset"),
+    ('', 'gpu',  "$silver$gpu$reset"),
+    ('', 'mem',  ("$text{0:N1}$muted / {1:N1} GB$reset  {2} $silver{3}%$reset" -f $memUsed, $memTotal, $bar, [int][math]::Round($memPct * 100))),
+    ('', 'disk', ("$text{0:N0}$muted / {1:N0} GB$reset $muted($($env:SystemDrive))$reset" -f $dUsed, $dTotal)),
+    ('', 'up',   "$silver$upStr$reset $muted· pwsh $($PSVersionTable.PSVersion)$reset")
 )
+
+$lines = @("$muted╭─$reset $title")
+for ($i = 0; $i -lt 7; $i++) {
+    $icon, $label, $value = $info[$i]
+    $lines += "$muted│$reset $($logo[$i])  $violet$icon$reset  $muted$($label.PadRight(4))$reset $value"
+}
+$lines += "$muted╰─$reset"
 Write-Host ($lines -join [Environment]::NewLine)

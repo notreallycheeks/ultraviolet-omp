@@ -83,21 +83,27 @@ oh-my-posh init fish --config ~/ultraviolet.omp.json | source
 ## Startup header (optional)
 
 `ultraviolet-header.ps1` replaces the default PowerShell startup banner with a
-hardware/OS summary rendered in the theme's palette — user, OS build, CPU, GPU,
-a RAM usage bar (flips to alert red above 85%), disk usage, and uptime, framed
-to chain visually into the prompt:
+hardware/OS summary rendered in the theme's palette — a gradient PowerShell
+logo (a sheared parallelogram with the `❯_`), user, OS build, CPU, GPU, a RAM
+usage bar (flips to alert red above 85%), disk usage, and uptime, framed to
+chain visually into the prompt (the `█` runs below are a solid violet-gradient
+fill in the real render):
 
 ```text
 ╭─ ultraviolet
-│   user  alecm@developer
-│   os    Windows 11 Pro 25H2 · 26200.7623
-│   cpu   AMD Ryzen 7 5800X 8-Core Processor
-│   gpu   NVIDIA GeForce RTX 3060 Ti
-│   mem   12.4 / 31.9 GB  ━━━━━━━━━━━━ 39%
-│   disk  518 / 931 GB (C:)
-│   up    2d 4h 13m · pwsh 7.6.4
+│       ██████████████    user  cheeks@developer
+│      ██████████████     os    Windows 11 Pro 25H2 · 26200.7623
+│     ██████████████      cpu   AMD Ryzen 7 5800X 8-Core Processor
+│    ███❯_█████████       gpu   NVIDIA GeForce RTX 3060 Ti
+│   ██████████████        mem   12.4 / 31.9 GB  ━━━━━━━━━━━━ 39%
+│  ██████████████         disk  518 / 931 GB (C:)
+│ ██████████████          up    2d 4h 13m · pwsh 7.6.4
 ╰─
 ```
+
+It gathers everything from the registry and .NET (no CIM/WMI), so it runs in
+well under 100 ms and never pushes profile load over the 500 ms threshold that
+makes pwsh print `Loading personal and system profiles took NNNms.`
 
 Download it next to the theme, then call it from your PowerShell `$PROFILE`
 (before the oh-my-posh init) — guarded so it only fires in interactive shells:
@@ -109,8 +115,11 @@ if ($Host.Name -eq 'ConsoleHost' -and -not [Console]::IsOutputRedirected -and
 }
 ```
 
-To silence the stock `PowerShell 7.x.x` banner itself, launch the shell with
-`-NoLogo` (in Windows Terminal, add it to the profile's `commandline`).
+To silence the stock `PowerShell 7.x.x` banner itself (and the
+slow-profile-load notice), launch the shell with `-NoLogo` — in Windows
+Terminal, set the profile's `commandline` to `pwsh.exe -NoLogo`. Note that a
+nested shell started by typing `pwsh` inside an existing session won't have
+the flag; new terminal tabs will.
 
 ## License
 
