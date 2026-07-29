@@ -1,0 +1,159 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "version": 3,
+  "final_space": true,
+  "pwd": "osc99",
+  "palette": {
+    "deep": "#16141C",
+    "surface": "#26242E",
+    "overlay": "#3D3A47",
+    "muted": "#716C85",
+    "silver": "#A9A5B8",
+    "text": "#E8E6F0",
+    "violet": "#8B5CF6",
+    "violet-deep": "#5B3FA6",
+    "violet-bright": "#C4B5FD",
+    "alert": "#F2557E"
+  },
+  "blocks": [
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "segments": [
+        {
+          "type": "text",
+          "style": "plain",
+          "foreground": "p:muted",
+          "background": "transparent",
+          "template": "╭─"
+        },
+        {
+          "type": "session",
+          "style": "diamond",
+          "leading_diamond": "",
+          "foreground": "p:violet-bright",
+          "background": "p:surface",
+          "background_templates": [
+            "{{ if .Root }}p:alert{{ end }}"
+          ],
+          "foreground_templates": [
+            "{{ if .Root }}p:deep{{ end }}"
+          ],
+          "template": " {{ if .Root }} {{ end }}{{ .UserName }}{{ if .SSHSession }}@{{ .HostName }}{{ end }} "
+        },
+        {
+          "type": "path",
+          "style": "powerline",
+          "powerline_symbol": "",
+          "foreground": "p:deep",
+          "background": "p:violet",
+          "template": "  {{ .Path }} ",
+          "properties": {
+            "style": "agnoster_short",
+            "max_depth": 3,
+            "folder_separator_icon": "  "
+          }
+        },
+        {
+          "type": "git",
+          "style": "powerline",
+          "powerline_symbol": "",
+          "foreground": "p:text",
+          "background": "p:overlay",
+          "template": " {{ .UpstreamIcon }}{{ .HEAD }}{{ if .BranchStatus }} {{ .BranchStatus }}{{ end }}{{ if .Working.Changed }} <p:violet-bright> {{ .Working.String }}</>{{ end }}{{ if .Staging.Changed }} <p:violet-bright> {{ .Staging.String }}</>{{ end }}{{ if gt .StashCount 0 }} <p:silver> {{ .StashCount }}</>{{ end }} ",
+          "properties": {
+            "branch_icon": " ",
+            "fetch_status": true,
+            "fetch_upstream_icon": true
+          }
+        },
+        {
+          "type": "status",
+          "style": "diamond",
+          "leading_diamond": "",
+          "trailing_diamond": "",
+          "foreground": "p:text",
+          "background": "p:violet-deep",
+          "background_templates": [
+            "{{ if gt .Code 0 }}p:alert{{ end }}"
+          ],
+          "foreground_templates": [
+            "{{ if gt .Code 0 }}p:deep{{ end }}"
+          ],
+          "template": " {{ if gt .Code 0 }} {{ .Code }}{{ else }}{{ end }} ",
+          "properties": {
+            "always_enabled": true
+          }
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "right",
+      "segments": [
+        {
+          "type": "executiontime",
+          "style": "plain",
+          "foreground": "p:silver",
+          "background": "transparent",
+          "template": " {{ .FormattedMs }} ",
+          "properties": {
+            "threshold": 500,
+            "style": "austin"
+          }
+        },
+        {
+          "type": "shell",
+          "style": "plain",
+          "foreground": "p:muted",
+          "background": "transparent",
+          "template": " {{ .Name }} "
+        },
+        {
+          "type": "time",
+          "style": "plain",
+          "foreground": "p:violet-bright",
+          "background": "transparent",
+          "template": " {{ .CurrentDate | date \"15:04:05\" }}"
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "newline": true,
+      "segments": [
+        {
+          "type": "text",
+          "style": "plain",
+          "foreground": "p:muted",
+          "background": "transparent",
+          "template": "╰─"
+        },
+        {
+          "type": "text",
+          "style": "plain",
+          "foreground": "p:violet",
+          "background": "transparent",
+          "foreground_templates": [
+            "{{ if gt .Code 0 }}p:alert{{ end }}"
+          ],
+          "template": "❯"
+        }
+      ]
+    }
+  ],
+  "transient_prompt": {
+    "foreground": "p:violet",
+    "background": "transparent",
+    "foreground_templates": [
+      "{{ if gt .Code 0 }}p:alert{{ end }}"
+    ],
+    "template": "❯ "
+  },
+  "secondary_prompt": {
+    "foreground": "p:muted",
+    "background": "transparent",
+    "template": "❯❯ "
+  }
+}
